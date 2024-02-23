@@ -1,8 +1,11 @@
-
+import win32security
+import ntsecuritycon
+import ctypes
 import os
 import hashlib
 import shutil
 import sched, time
+from stat import FILE_ATTRIBUTE_HIDDEN
 
 
 #Crea un directorio para guardar los archivos a indexar y supervisar
@@ -11,19 +14,22 @@ def crearDirectorioConfidencial():
     path = os.path.join(os.getcwd(), directorio)
     if (not os.path.exists(path)):
         os.mkdir(path)
-
+        
 #Crea el archivo de HIDS
 def crearHIDS():
-    filename = "confidencial\HIDS"
+    filename = "confidencial/HIDS"
     path = os.path.join(os.getcwd(), filename)
     if (not os.path.exists(path)):
         with open(filename, "w") as file:
             file.write("")
+            if os.name == 'nt':
+                ctypes.windll.kernel32.SetFileAttributesW(path,
+                                                        FILE_ATTRIBUTE_HIDDEN)
             
 #Crea los mocks
 def crearMocks():
     for i in range(5):
-        filename = "confidencial\mockfile"+str(i)
+        filename = "confidencial/mockfile"+str(i)
         path = os.path.join(os.getcwd(), filename)
         if (not os.path.exists(path)):
             with open(filename, "w") as file:
@@ -32,7 +38,7 @@ def crearMocks():
 #Comprueba los ficheros actuales con el HIDS
 def comprobarHIDS():
     directorio = os.path.join(os.getcwd(), "confidencial")
-    with open(directorio+"\HIDS", "r+") as fileHIDS:
+    with open(directorio+"/HIDS", "r+") as fileHIDS:
         for line in fileHIDS:
             parts = line.split(";")
             if (os.path.exists(directorio+"\\"+parts[0])):
@@ -55,7 +61,7 @@ def escribirHIDS():
                 bytes = file.read()
                 hash = hashlib.sha1(bytes).hexdigest()
             file.close()
-            with open(directorio+"\HIDS", "r+") as fileHIDS:
+            with open(directorio+"/HIDS", "r+") as fileHIDS:
                 alreadyPresent = False
                 for line in fileHIDS:
                     parts = line.split(";")
@@ -77,12 +83,15 @@ def crearDirectorioBackup():
     path = os.path.join(os.getcwd(), directorio)
     if (not os.path.exists(path)):
         os.mkdir(path)
+        if os.name == 'nt':
+                ctypes.windll.kernel32.SetFileAttributesW(path,
+                                                        FILE_ATTRIBUTE_HIDDEN)
 
 #Llena la carpeta backup de los ficheros registrados    
 def crearBackups():
     crearDirectorioBackup()
     directorio = os.path.join(os.getcwd(), "confidencial")
-    with open(directorio+"\HIDS", "r+") as fileHIDS:
+    with open(directorio+"/HIDS", "r+") as fileHIDS:
         for line in fileHIDS:
             parts = line.split(";")
             if (os.path.exists(directorio+"\\"+parts[0])):
@@ -98,7 +107,9 @@ def loopPrincipal(scheduler):
     comprobarHIDS()
     escribirHIDS()
     crearBackups()
-    
+      
+
 my_scheduler = sched.scheduler(time.time, time.sleep)
 my_scheduler.enter(10, 1, loopPrincipal, (my_scheduler,))
 my_scheduler.run()
+
