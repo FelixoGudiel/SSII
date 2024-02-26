@@ -158,9 +158,9 @@ def crearInforme():
 def escribirHIDS(seccionRuta):
     for directorio in seccionRuta:
         for fileIter in os.listdir(directorio):
-            if fileIter != "HIDS":
-                filename = directorio + "\\" + fileIter
-                path = os.path.join(os.getcwd(), filename)
+            filename = directorio + "\\" + fileIter
+            path = os.path.join(os.getcwd(), filename)
+            if fileIter != "HIDS" and not os.path.isdir(path):
                 with open(path, "rb") as file:
                     bytes = file.read()
                     hash = hashlib.sha1(bytes).hexdigest()
