@@ -12,6 +12,7 @@ REVISIONES = 0
 
 DRIVE_LETTER = os.path.splitdrive(os.getcwd())[0]
 
+
 # Crea el fichero de configuración
 def crearConfig():
     filename = "config"
@@ -19,17 +20,22 @@ def crearConfig():
     path = os.path.join(os.getcwd(), filename)
     dirpath = os.path.join(os.getcwd(), directorio)
     if not os.path.exists(path):
-        with open(path, "w") as file:
-            file.write("Rutas de carpetas a conservar: \n" + dirpath + "\n" +
-                       "Tiempo entre revisiones (segundos): \n10 \n"+
-                       "Número de revisiones por informe: \n30 \n"+
-                       "Correo electrónico (opcional): \nfelixangelgudiel@gmail.com\n")
+        with open(path, "w", encoding="utf-8") as file:
+            file.write(
+                "Rutas de carpetas a conservar: \n"
+                + dirpath
+                + "\n"
+                + "Tiempo entre revisiones (segundos): \n10 \n"
+                + "Número de revisiones por informe: \n30 \n"
+                + "Correo electrónico (opcional): \nfelixangelgudiel@gmail.com\n"
+            )
 
-#Lee el fichero de configuración
+
+# Lee el fichero de configuración
 def leerConfig():
     filename = "config"
     path = os.path.join(os.getcwd(), filename)
-    with open(path, "r") as file:
+    with open(path, "r", encoding="utf-8") as file:
         lastCheckoint = ""
         seccionRutas = []
         seccionTiempo = 0
@@ -37,23 +43,25 @@ def leerConfig():
             if not line.startswith("Rutas"):
                 if lastCheckoint == "":
                     if line.startswith("T"):
-                        lastCheckoint ="Tiempo entre revisiones (segundos): "
+                        lastCheckoint = "Tiempo entre revisiones (segundos): "
                     else:
                         seccionRutas.append(line.replace("\n", ""))
-                elif lastCheckoint =="Tiempo entre revisiones (segundos): ":
+                elif lastCheckoint == "Tiempo entre revisiones (segundos): ":
                     if line.startswith("N"):
-                        lastCheckoint ="Número de revisiones por informe: "
+                        lastCheckoint = "Número de revisiones por informe: "
                     else:
-                        seccionTiempo = line.replace("\n", "")    
-                elif lastCheckoint =="Número de revisiones por informe: ":
+                        seccionTiempo = line.replace("\n", "")
+                elif lastCheckoint == "Número de revisiones por informe: ":
                     if line.startswith("C"):
-                        lastCheckoint ="Correo electrónico (opcional): "
+                        lastCheckoint = "Correo electrónico (opcional): "
                     else:
                         seccionRevisiones = line.replace("\n", "")
-                elif lastCheckoint =="Correo electrónico (opcional): ":
+                elif lastCheckoint == "Correo electrónico (opcional): ":
                     seccionCorreo = line.replace("\n", "")
         file.close()
-    return(seccionRutas, int(seccionTiempo), int(seccionRevisiones), seccionCorreo)
+    return (seccionRutas, int(seccionTiempo), int(seccionRevisiones), seccionCorreo)
+
+
 # Crea un directorio para guardar los archivos a indexar y supervisar
 def crearDirectorioConfidencial():
     directorio = "confidencial"
@@ -67,7 +75,7 @@ def crearHIDS():
     filename = "confidencial/HIDS"
     path = os.path.join(os.getcwd(), filename)
     if not os.path.exists(path):
-        with open(filename, "w") as file:
+        with open(filename, "w", encoding="utf-8") as file:
             file.write("")
             if os.name == "nt":
                 ctypes.windll.kernel32.SetFileAttributesW(path, FILE_ATTRIBUTE_HIDDEN)
@@ -79,34 +87,41 @@ def crearMocks():
         filename = "confidencial/mockfile" + str(i)
         path = os.path.join(os.getcwd(), filename)
         if not os.path.exists(path):
-            with open(filename, "w") as file:
+            with open(filename, "w", encoding="utf-8") as file:
                 file.write("Contenido del mockfile numero " + str(i))
+
+
+def crearLogFile(parts, text):
+    currentDate = datetime.now()
+    logName = "logs/avisos/log_" + currentDate.strftime("%d-%m-%Y")
+    logText = (
+        "ALERTA "
+        + str(currentDate.strftime("%d-%m-%Y %H:%M:%S"))
+        + ": El fichero "
+        + "[ "
+        + parts[0]
+        + " ]"
+        + text
+    )
+    with open(logName, "a", encoding="utf-8") as logFile:
+        logFile.write(logText + "\n")
 
 
 # Comprueba los ficheros actuales con el HIDS
 def comprobarHIDS():
     directorio = os.path.join(os.getcwd(), "confidencial")
-    with open(directorio + "/HIDS", "r+") as fileHIDS:
+    with open(directorio + "/HIDS", "r+", encoding="utf-8") as fileHIDS:
         for line in fileHIDS:
             parts = line.split(";")
             if os.path.exists(DRIVE_LETTER + "\\" + parts[0]):
-                with open(DRIVE_LETTER + "\\" +parts[0], "rb") as fileCheck:
+                with open(
+                    DRIVE_LETTER + "\\" + parts[0],
+                    "rb",
+                ) as fileCheck:
                     bytes = fileCheck.read()
                     hash = hashlib.sha1(bytes).hexdigest()
                     if not hash == parts[1].replace("\n", ""):
-                        currentDate = datetime.now()
-                        logName = "logs/avisos/log_" + currentDate.strftime("%d-%m-%Y")
-                        logText = (
-                            "ALERTA "
-                            + str(currentDate.strftime("%d-%m-%Y %H:%M:%S"))
-                            + ": El fichero "
-                            + "[ "
-                            + parts[0]
-                            + " ]"
-                            + " ha sido modificado"
-                        )
-                        with open(logName, "a") as logFile:
-                            logFile.write(logText + "\n")
+                        crearLogFile(parts, " ha sido modificado")
                         fileCheck.close()
                         global AVISOS
                         AVISOS += 1
@@ -115,7 +130,7 @@ def comprobarHIDS():
                         global ACIERTOS
                         ACIERTOS += 1
             else:
-                #Parte de logear la restauración por eliminación
+                crearLogFile(parts, " ha sido eliminado")
                 AVISOS += 1
                 restaurarFichero(parts[0])
         global REVISIONES
@@ -134,7 +149,8 @@ def crearInforme():
         "INFORME "
         + str(currentDate.strftime("%d-%m-%Y %H:%M:%S"))
         + ": Se han realizado "
-        + str(REVISIONES) + " revisiones"
+        + str(REVISIONES)
+        + " revisiones"
         + "\n"
         + "Avisos: "
         + str(AVISOS)
@@ -146,7 +162,7 @@ def crearInforme():
         + str(round((ACIERTOS / (AVISOS + ACIERTOS)) * 100, 2))
         + "% \n"
     )
-    with open(logName, "a") as logFile:
+    with open(logName, "a", encoding="utf-8") as logFile:
         logFile.write(logText + "\n")
 
     AVISOS = 0
@@ -165,23 +181,32 @@ def escribirHIDS(seccionRuta):
                     bytes = file.read()
                     hash = hashlib.sha1(bytes).hexdigest()
                 file.close()
-                with open(os.getcwd()+ "\confidencial\HIDS", "r+") as fileHIDS:
+                with open(
+                    os.getcwd() + "\confidencial\HIDS", "r+", encoding="utf-8"
+                ) as fileHIDS:
                     alreadyPresent = False
                     for line in fileHIDS:
                         parts = line.split(";")
-                        if parts[0] == os.path.join(os.getcwd(), filename).replace("C:\\", ""):
+                        if parts[0] == os.path.join(os.getcwd(), filename).replace(
+                            "C:\\", ""
+                        ):
                             alreadyPresent = True
                     if not alreadyPresent:
-                        fileHIDS.write(os.path.join(os.getcwd(),filename).replace("C:\\", "") + ";" + hash + "\n")
+                        fileHIDS.write(
+                            os.path.join(os.getcwd(), filename).replace("C:\\", "")
+                            + ";"
+                            + hash
+                            + "\n"
+                        )
                 fileHIDS.close()
 
 
 # Restaura un fichero basándose en la carpeta backup
 def restaurarFichero(filename):
     directorioBack = os.path.join(os.getcwd(), "backup")
-    if os.path.exists(DRIVE_LETTER +"\\" + filename):
-        os.remove(DRIVE_LETTER +"\\" + filename)
-    shutil.copyfile(directorioBack + "\\" + filename, DRIVE_LETTER +"\\" + filename)
+    if os.path.exists(DRIVE_LETTER + "\\" + filename):
+        os.remove(DRIVE_LETTER + "\\" + filename)
+    shutil.copyfile(directorioBack + "\\" + filename, DRIVE_LETTER + "\\" + filename)
 
 
 # Crea la carpeta backup
@@ -198,7 +223,7 @@ def crearDirectorioBackup():
 def crearBackups():
     crearDirectorioBackup()
     directorio = os.path.join(os.getcwd(), "confidencial")
-    with open(directorio + "/HIDS", "r+") as fileHIDS:
+    with open(directorio + "/HIDS", "r+", encoding="utf-8") as fileHIDS:
         for line in fileHIDS:
             parts = line.split(";")
             if os.path.exists(DRIVE_LETTER + "\\" + parts[0]):
@@ -206,10 +231,10 @@ def crearBackups():
                 for folder in parts[0].split("\\")[:-1]:
                     if not os.path.exists(os.path.join(currentFolder, folder)):
                         os.mkdir(os.path.join(currentFolder, folder))
-                    currentFolder += "\\" +folder  
+                    currentFolder += "\\" + folder
                 shutil.copyfile(
-                    DRIVE_LETTER+ "\\" + parts[0],
-                    os.path.join(os.getcwd(), "backup") + "\\" + parts[0]
+                    DRIVE_LETTER + "\\" + parts[0],
+                    os.path.join(os.getcwd(), "backup") + "\\" + parts[0],
                 )
 
 
@@ -230,18 +255,20 @@ def crearDirectorioLogs():
 # Orden de eventos
 def loopPrincipal(scheduler):
     scheduler.enter(seccionTiempo, 1, loopPrincipal, (scheduler,))
-    crearDirectorioConfidencial()
-    crearDirectorioLogs()
+
     crearHIDS()
-    crearMocks()
     comprobarHIDS()
     escribirHIDS(seccionRuta)
     crearBackups()
     if REVISIONES % seccionRevisiones == 0:
         crearInforme()
 
+
 print("=== HIDS STARTED ===")
+crearDirectorioLogs()
 crearConfig()
+crearDirectorioConfidencial()
+crearMocks()
 seccionRuta, seccionTiempo, seccionRevisiones, seccionCorreo = leerConfig()
 my_scheduler = sched.scheduler(time.time, time.sleep)
 my_scheduler.enter(1, 1, loopPrincipal, (my_scheduler,))
