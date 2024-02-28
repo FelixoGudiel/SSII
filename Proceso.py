@@ -5,11 +5,13 @@ import shutil
 import sched, time
 from stat import FILE_ATTRIBUTE_HIDDEN
 from datetime import datetime
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 
 AVISOS = 0
 ACIERTOS = 0
 REVISIONES = 0
-
+SENDGRID_API_KEY = ""
 DRIVE_LETTER = os.path.splitdrive(os.getcwd())[0]
 
 
@@ -27,7 +29,7 @@ def crearConfig():
                 + "\n"
                 + "Tiempo entre revisiones (segundos): \n10 \n"
                 + "Número de revisiones por informe: \n30 \n"
-                + "Correo electrónico (opcional): \nfelixangelgudiel@gmail.com\n"
+                + "Correo electrónico (opcional): \ntest@gmail.com\n"
             )
 
 
@@ -121,6 +123,7 @@ def comprobarHIDS():
                     bytes = fileCheck.read()
                     hash = hashlib.sha1(bytes).hexdigest()
                     if not hash == parts[1].replace("\n", ""):
+                        mandarCorreo(seccionCorreo, DRIVE_LETTER + "\\" + parts[0])
                         crearLogFile(parts, " ha sido modificado")
                         fileCheck.close()
                         global AVISOS
@@ -130,6 +133,7 @@ def comprobarHIDS():
                         global ACIERTOS
                         ACIERTOS += 1
             else:
+                mandarCorreo(seccionCorreo, DRIVE_LETTER + "\\" + parts[0])
                 crearLogFile(parts, " ha sido eliminado")
                 AVISOS += 1
                 restaurarFichero(parts[0])
@@ -250,8 +254,22 @@ def crearDirectorioLogs():
         path = os.path.join(os.getcwd(), "logs", dir)
         if not os.path.exists(path):
             os.mkdir(path)
+            
+# Manda el correo a la dirección especificada
+def mandarCorreo(seccionCorreo, fichero):
+    if (SENDGRID_API_KEY!= "" and seccionCorreo!=""):
+        mailMessage = Mail(
+            from_email="insegusg13@gmail.com",
+            to_emails=seccionCorreo,
+            )
 
-
+        mailMessage.dynamic_template_data = {
+                    "fichero": fichero,
+                        }
+        mailMessage.template_id = "d-b9296865163946669d4e3239b89b50f4"
+        sg = SendGridAPIClient(SENDGRID_API_KEY)
+        sg.send(mailMessage)
+    
 # Orden de eventos
 def loopPrincipal(scheduler):
     scheduler.enter(seccionTiempo, 1, loopPrincipal, (scheduler,))
