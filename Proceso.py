@@ -121,7 +121,7 @@ def comprobarHIDS():
                     "rb",
                 ) as fileCheck:
                     bytes = fileCheck.read()
-                    hash = hashlib.sha1(bytes).hexdigest()
+                    hash = hashlib.sha256(bytes).hexdigest()
                     if not hash == parts[1].replace("\n", ""):
                         mandarCorreo(seccionCorreo, DRIVE_LETTER + "\\" + parts[0])
                         crearLogFile(parts, " ha sido modificado")
@@ -183,7 +183,7 @@ def escribirHIDS(seccionRuta):
             if fileIter != "HIDS" and not os.path.isdir(path):
                 with open(path, "rb") as file:
                     bytes = file.read()
-                    hash = hashlib.sha1(bytes).hexdigest()
+                    hash = hashlib.sha256(bytes).hexdigest()
                 file.close()
                 with open(
                     os.getcwd() + "\confidencial\HIDS", "r+", encoding="utf-8"
@@ -254,22 +254,24 @@ def crearDirectorioLogs():
         path = os.path.join(os.getcwd(), "logs", dir)
         if not os.path.exists(path):
             os.mkdir(path)
-            
+
+
 # Manda el correo a la dirección especificada
 def mandarCorreo(seccionCorreo, fichero):
-    if (SENDGRID_API_KEY!= "" and seccionCorreo!=""):
+    if SENDGRID_API_KEY != "" and seccionCorreo != "":
         mailMessage = Mail(
             from_email="insegusg13@gmail.com",
             to_emails=seccionCorreo,
-            )
+        )
 
         mailMessage.dynamic_template_data = {
-                    "fichero": fichero,
-                        }
+            "fichero": fichero,
+        }
         mailMessage.template_id = "d-b9296865163946669d4e3239b89b50f4"
         sg = SendGridAPIClient(SENDGRID_API_KEY)
         sg.send(mailMessage)
-    
+
+
 # Orden de eventos
 def loopPrincipal(scheduler):
     scheduler.enter(seccionTiempo, 1, loopPrincipal, (scheduler,))
